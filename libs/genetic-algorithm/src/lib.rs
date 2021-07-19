@@ -4,9 +4,9 @@ use rand::Rng;
 use rand::RngCore;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use std::fmt;
 use std::iter::FromIterator;
 use std::ops::Index;
-use std::fmt;
 
 pub trait Individual {
     fn create(chromosome: Chromosome) -> Self;
@@ -26,6 +26,13 @@ pub struct GeneticAlgorithm<S> {
     mutation_method: Box<dyn MutationMethod>,
 }
 
+#[derive(Clone, Debug)]
+pub struct Statistics {
+    min_fitness: f32,
+    max_fitness: f32,
+    avg_fitness: f32,
+}
+
 impl<S> GeneticAlgorithm<S>
 where
     S: SelectionMethod,
@@ -42,22 +49,65 @@ where
         }
     }
 
-    pub fn evolve<I>(&self, rng: &mut dyn RngCore, population: &[I]) -> Vec<I>
+    pub fn evolve<I>(&self, rng: &mut dyn RngCore, population: &[I]) -> (Vec<I>, Statistics)
     where
         I: Individual,
     {
         assert!(!population.is_empty());
-        (0..population.len())
+
+        let new_population = (0..population.len())
             .map(|_| {
                 let parent_a = self.selection_method.select(rng, population).chromosome();
-
                 let parent_b = self.selection_method.select(rng, population).chromosome();
 
                 let mut child = self.crossover_method.crossover(rng, parent_a, parent_b);
+
                 self.mutation_method.mutate(rng, &mut child);
+
                 I::create(child)
             })
-            .collect()
+            .collect();
+
+        (new_population, Statistics::new(population))
+    }
+}
+
+impl Statistics {
+    fn new<I>(population: &[I]) -> Self
+    where
+        I: Individual,
+    {
+        assert!(!population.is_empty());
+
+        let mut min_fitness = population[0].fitness();
+        let mut max_fitness = min_fitness;
+        let mut sum_fitness = 0.0;
+
+        for individual in population {
+            let fitness = individual.fitness();
+
+            min_fitness = min_fitness.min(fitness);
+            max_fitness = max_fitness.max(fitness);
+            sum_fitness += fitness;
+        }
+
+        Self {
+            min_fitness,
+            max_fitness,
+            avg_fitness: sum_fitness / (population.len() as f32),
+        }
+    }
+
+    pub fn min_fitness(&self) -> f32 {
+        self.min_fitness
+    }
+
+    pub fn max_fitness(&self) -> f32 {
+        self.max_fitness
+    }
+
+    pub fn avg_fitness(&self) -> f32 {
+        self.avg_fitness
     }
 }
 
