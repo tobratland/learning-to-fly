@@ -123,7 +123,7 @@ impl Clone for Chromosome {
 
 impl fmt::Debug for Chromosome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Hi: {}", "lol")
+        write!(f, "")
     }
 }
 
@@ -573,13 +573,13 @@ mod tests {
         // We're running `.evolve()` a few times, so that the
         // differences between initial and output population are
         // easier to spot.
-        //
+        // 
         // No particular reason for a number of 10 - this test would
         // be fine for 5, 20 or even 1000 generations; the only thing
         // that'd change is the *magnitude* of difference between
         // initial and output population.
         for _ in 0..10 {
-            population = ga.evolve(&mut rng, &population);
+            population = ga.evolve(&mut rng, &population).0;
         }
 
         let expected_population = vec![
